@@ -1,5 +1,4 @@
-package project2.rmi;
-
+package rmi;
 import java.io.*;
 import java.lang.reflect.*;
 import java.lang.reflect.Proxy;

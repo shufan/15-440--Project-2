@@ -2,6 +2,8 @@
 *.project
 # Ignore objects and archives.
 *.[oa]
+bin/
+*.classpath
 # Ignore compiled source #
 *.com
 *.class

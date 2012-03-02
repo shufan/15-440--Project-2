@@ -1,4 +1,4 @@
-package project2.rmi;
+package rmi;
 
 import java.net.*;
 import java.util.Arrays;
