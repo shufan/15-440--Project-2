@@ -1,0 +1,11 @@
+# Ignore any sublimetext2 project descriptions
+*.project
+# Ignore objects and archives.
+*.[oa]
+# Ignore compiled source #
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
