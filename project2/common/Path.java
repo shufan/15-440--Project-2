@@ -40,11 +40,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     */
     public Path(Path path, String component)
     {
+        // check for illegal argument conditions
     	if((component.indexOf('/') != -1) || (component.indexOf(':') != -1) || (component.length() == 0)) {
     		throw new IllegalArgumentException();
     	}
     	pathComponents = new LinkedList<String>();
+        // add existing path
         pathComponents.addAll((Collection<String>) path.pathComponents);
+        // add new path component
         pathComponents.add(component);
     }
 
@@ -62,17 +65,20 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public Path(String path)
     {
+        // check for illegal argument conditions
     	if((!path.startsWith("/")) || path.contains(":")) {
     		throw new IllegalArgumentException();
     	}
     	pathComponents = new LinkedList<String>();
     	StringTokenizer pathParser = new StringTokenizer(path,"/");
+        // add each token, delimited by "/", to pathComponents linked list
     	while(pathParser.hasMoreTokens()) {
     		pathComponents.add(pathParser.nextToken());
     	}
     }
 
-    /** Creates a new path from a pathComponents LinkedList.
+    /** Creates a new path from a pathComponents LinkedList. Helpful for
+        later methods.
 
         @param pathComponents The linked list of path components.
     */
@@ -92,11 +98,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     public Iterator<String> iterator()
     {
     	class PathIter implements Iterator<String> {
+            // use iterator from linked list class
     		Iterator<String> origIterator;
 
     		public PathIter() {
         		origIterator = pathComponents.iterator();
     		}
+
+            // use hasNext and next as given
 			@Override
 			public boolean hasNext() {
 				return origIterator.hasNext();
@@ -107,6 +116,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
 				return origIterator.next();
 			}
 
+            // remove not supported
 			@Override
 			public void remove() {
 				throw new UnsupportedOperationException();
@@ -127,19 +137,23 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public static Path[] list(File directory) throws FileNotFoundException
     {
+        // check for illegal argument and file not found conditions
     	if(!directory.exists()) {
     		throw new FileNotFoundException();
     	}
     	if(!directory.isDirectory()) {
     		throw new IllegalArgumentException();
     	}
+        // retrive array of files in given directory
     	File[] files = directory.listFiles();
-    	//dummy array to pass into toArray for return type
+    	// dummy array to pass into toArray for return type
     	Path[] arraytype = new Path[0];
     	ArrayList<Path> filepaths = new ArrayList<Path>();
     	for(File f : files) {
+            // recursively list files within directories
     		if(f.isDirectory()) {
     			listHelper(directory, f,filepaths);
+            // add non-directory files to the arraylist of files, relative to root
     		} else if(f.isFile()) {
         		filepaths.add(new Path(f.getPath().replaceFirst(directory.getPath(), "")));
     		}
@@ -147,6 +161,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	return filepaths.toArray(arraytype);
     }
 
+    // helper method for recursively listing directories within directories
     public static void listHelper(File root, File directory, ArrayList<Path> filepaths) throws FileNotFoundException {
     	if(!directory.exists()) {
     		throw new FileNotFoundException();
@@ -181,11 +196,13 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public Path parent()
     {
+        // check if root
     	if(this.isRoot()) {
     		throw new IllegalArgumentException();
     	}
     	LinkedList<String> parentPathComponents = new LinkedList<String>();
     	parentPathComponents.addAll(pathComponents);
+        // return original pathComponents minus last
     	parentPathComponents.removeLast();
     	return new Path(parentPathComponents);
     }
@@ -198,6 +215,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public String last()
     {
+        // check if root
     	if(this.isRoot()) {
     		throw new IllegalArgumentException();
     	} else {
@@ -220,10 +238,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	LinkedList<String> otherComponents = other.pathComponents;
     	Iterator<String> otherIterator = otherComponents.iterator();
     	Iterator<String> thisIterator = pathComponents.iterator();
-    	//subpath must have less components
+    	// subpath must have less or equal number of components
     	if(otherComponents.size() > pathComponents.size()) {
     		return false;
     	}
+        // iterate through each and check that components in other are equal to these
     	while(otherIterator.hasNext()) {
     		if(!otherIterator.next().equals(thisIterator.next())) {
     			return false;
@@ -284,22 +303,23 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
     	LinkedList<String> theseComponents = pathComponents;
     	LinkedList<String> otherComponents = other.pathComponents;
-    	//base cases
-    	//both empty, then return equals
+    	// base cases
+    	// both empty, then return equals
     	if(theseComponents.isEmpty() && otherComponents.isEmpty()) {
     		return 0;
-    	//this empty, other goes deeper
+    	// this empty, other goes deeper => precedes
     	} else if(theseComponents.isEmpty() && !otherComponents.isEmpty()) {
     		return -1;
+        // this goes depper, other empty => follows
     	} else if(!theseComponents.isEmpty() && otherComponents.isEmpty()) {
     		return 1;
     	} else {
     		String topOfThis = theseComponents.poll();
         	String topOfOther = otherComponents.poll();
-        	//if top directory is smaller lexicographically
+        	// if top directory is smaller lexicographically
         	if(topOfThis.compareTo(topOfOther) < 0) {
         		return -1;
-        	//if top directory is larger lexicographically
+        	// if top directory is larger lexicographically
         	} else if(topOfThis.compareTo(topOfOther) > 0) {
         		return 1;
         	// if top directory equal recursively compare paths starting at child directory
@@ -322,10 +342,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
     	LinkedList<String> theseComponents = pathComponents;
     	LinkedList<String> otherComponents = ((Path) other).pathComponents;
-    	//if different number of components then not equal
+    	// if different number of components then not equal
     	if(theseComponents.size() != otherComponents.size()) {
     		return false;
     	}
+        // iterate through each and make sure all components are equal
     	Iterator<String> otherIterator = otherComponents.iterator();
     	Iterator<String> thisIterator = pathComponents.iterator();
     	while(thisIterator.hasNext()) {
@@ -361,9 +382,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     public String toString()
     {
     	StringBuilder pathString = new StringBuilder();
+        // root string = "/"
     	if(this.isRoot()) {
     		pathString.append("/");
     	}
+        // every other component delimited by "/"
         for(String pc : pathComponents) {
     		pathString.append("/");
             pathString.append(pc);
