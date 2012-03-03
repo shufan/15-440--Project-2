@@ -70,7 +70,7 @@ public class PathTest extends Test
             // List the files in the directory.
             File    file = directory.root();
             Path[]  listed = Path.list(file);
-
+            
             // Check that the correct files have been listed.
             Path[]  expected = new Path[] {new Path("/file1"),
                                            new Path("/file2"),
