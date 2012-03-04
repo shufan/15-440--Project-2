@@ -16,6 +16,14 @@ import naming.*;
  */
 public class StorageServer implements Storage, Command
 {
+	File root;
+	Skeleton clientSkeleton;
+	Skeleton commandSkeleton;
+	int clientPort;
+	int commandPort;
+	static int DEFAULT_CLIENT_PORT = 7225;
+	static int DEFAULT_COMMAND_PORT = 9325;
+
     /** Creates a storage server, given a directory on the local filesystem, and
         ports to use for the client and command interfaces.
 
@@ -33,7 +41,24 @@ public class StorageServer implements Storage, Command
     */
     public StorageServer(File root, int client_port, int command_port)
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if(root == null) {
+    		throw new NullPointerException();
+    	}
+    	this.root = root;
+    	InetSocketAddress clientAddr;
+    	InetSocketAddress commandAddr;
+    	if(client_port == 0) {
+        	clientAddr = new InetSocketAddress(DEFAULT_CLIENT_PORT);
+    	} else {
+    		clientAddr = new InetSocketAddress(client_port);
+    	}
+		clientSkeleton = new Skeleton(Storage.class, this, clientAddr);
+    	if(command_port == 0) {
+        	commandAddr = new InetSocketAddress(DEFAULT_COMMAND_PORT);
+    	} else {
+        	commandAddr = new InetSocketAddress(command_port);
+    	}
+		commandSkeleton = new Skeleton(Storage.class, this, commandAddr);
     }
 
     /** Creats a storage server, given a directory on the local filesystem.
@@ -49,7 +74,12 @@ public class StorageServer implements Storage, Command
      */
     public StorageServer(File root)
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if(root == null) {
+    		throw new NullPointerException();
+    	}
+    	this.root = root;
+    	clientSkeleton = new Skeleton(Storage.class, this, new InetSocketAddress(DEFAULT_CLIENT_PORT));
+    	commandSkeleton = new Skeleton(Storage.class, this, new InetSocketAddress(DEFAULT_COMMAND_PORT));
     }
 
     /** Starts the storage server and registers it with the given naming
@@ -75,7 +105,37 @@ public class StorageServer implements Storage, Command
     public synchronized void start(String hostname, Registration naming_server)
         throws RMIException, UnknownHostException, FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if(!root.exists() || root.isFile()) {
+    		throw new FileNotFoundException();
+    	}
+    	Storage clientStub = (Storage) Stub.create(Storage.class, clientSkeleton, hostname);
+    	Command commandStub = (Command) Stub.create(Command.class, commandSkeleton, hostname);
+    	clientSkeleton.start();
+    	commandSkeleton.start();
+    	Path[] files = Path.list(root);
+    	Path[] duplicateFiles = naming_server.register(clientStub, commandStub, files);
+    	// delete all duplicate files
+    	for(Path p : duplicateFiles) {
+    		p.toFile(root).delete();
+    	}
+    	// delete all empty directories
+    	deleteEmpty(root);
+    }
+
+    public synchronized void deleteEmpty(File parent) {
+    	if(parent.isFile()) {
+    		return;
+    	}
+    	File[] filesAndDirs = parent.listFiles();
+    	//recursively delete empty subdirectories
+    	for(File f : filesAndDirs) {
+    		deleteEmpty(f);
+    	}
+    	// must delete after recursively deleting subdirectories because dirs with
+    	// only empty dirs in them must be deleted
+    	if(parent.list().length == 0) {
+    		parent.delete();
+    	}
     }
 
     /** Stops the storage server.
@@ -85,7 +145,8 @@ public class StorageServer implements Storage, Command
      */
     public void stop()
     {
-        throw new UnsupportedOperationException("not implemented");
+    	clientSkeleton.stop();
+    	commandSkeleton.stop();
     }
 
     /** Called when the storage server has shut down.
@@ -101,21 +162,54 @@ public class StorageServer implements Storage, Command
     @Override
     public synchronized long size(Path file) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	File f = file.toFile(root);
+    	if(!f.exists() || f.isDirectory()) {
+    		throw new FileNotFoundException();
+    	}
+    	return f.length();
     }
 
     @Override
     public synchronized byte[] read(Path file, long offset, int length)
         throws FileNotFoundException, IOException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	File f = file.toFile(root);
+    	if(!f.exists() || f.isDirectory()) {
+    		throw new FileNotFoundException();
+    	}
+    	if((offset < 0) || (length < 0) || (offset + length > f.length())) {
+    		throw new IndexOutOfBoundsException();
+    	}
+    	InputStream reader = new FileInputStream(f);
+    	byte[] output = new byte[length];
+    	reader.read(output, (int) offset, length);
+    	return output;
     }
 
     @Override
     public synchronized void write(Path file, long offset, byte[] data)
         throws FileNotFoundException, IOException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	File f = file.toFile(root);
+    	if(!f.exists() || f.isDirectory()) {
+    		throw new FileNotFoundException();
+    	}
+    	if(offset < 0) {
+    		throw new IndexOutOfBoundsException();
+    	}
+    	InputStream reader = new FileInputStream(f);
+    	FileOutputStream writer = new FileOutputStream(f);
+    	long readLength = Math.min(offset, f.length());
+    	byte[] offsetBytes = new byte[(int) readLength];
+    	reader.read(offsetBytes);
+    	writer.write(offsetBytes, 0, (int) readLength);
+		long fillLength = offset - f.length();
+    	if(fillLength > 0) {
+    		for(int i = 0; i < (int) fillLength; i ++) {
+        		writer.write(0);
+    		}
+    	}
+        writer.write(data);
     }
 
     // The following methods are documented in Command.java.

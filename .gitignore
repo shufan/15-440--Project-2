@@ -4,10 +4,12 @@
 *.[oa]
 bin/
 *.classpath
-# Ignore compiled source #
+# Ignore compiled source
 *.com
 *.class
 *.dll
 *.exe
 *.o
 *.so
+# Ignore ds_store files
+*.DS_store
