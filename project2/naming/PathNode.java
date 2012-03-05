@@ -53,7 +53,7 @@ public class PathNode
 			String component = componentItr.next();
 			//if tree contains the component, keeps iterating
 			if (currentNode.children.containsKey(component))
-				currentNode = children.get(component);
+				currentNode = currentNode.getChildrenMap().get(component);
 			else
 				return null;
 		}
@@ -63,9 +63,12 @@ public class PathNode
 	public boolean addFile(Iterator<String> pathItr) {
 		//iterates through the components of the path
 		if (pathItr.hasNext()) {
+			System.out.println("last step");
 			String comp = pathItr.next();
+			System.out.println("THIS IS A COMPONENT: " + comp);
 			//if component has already been added as this node's child, recurse
 			if (children.containsKey(comp)) {
+				System.out.println("GOODGOODGOODGOODGOOD" + comp);
 				PathNode compNode = children.get(comp);
 				return compNode.addFile(pathItr);
 			}
@@ -73,12 +76,16 @@ public class PathNode
 			else {
 				//while more components left in path, add them to the tree
 				boolean moreComp = true;
+				PathNode currNode = this;
 				do {
 					PathNode pN = new PathNode();
-					children.put(comp, pN);
+					currNode.getChildrenMap().put(comp, pN);
 					if (!pathItr.hasNext()) {
 						pN.setIsDir(false);
 						moreComp = false;
+					} else {
+						currNode = currNode.getChildrenMap().get(comp);
+						comp = pathItr.next();
 					}
 				} while (moreComp);
 				return true;

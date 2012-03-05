@@ -38,7 +38,7 @@ public class NamingServer implements Service, Registration
 	HashMap<Storage, Command> storageCmdMap;
 	Skeleton<Registration> regisSkel;
 	Skeleton<Service> servSkel;
-	
+
     /** Creates the naming server object.
 
         <p>
@@ -111,15 +111,22 @@ public class NamingServer implements Service, Registration
     {
         throw new UnsupportedOperationException("not implemented");
     }
-    
+
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
-        if (!pathStorageMap.containsKey(path))
-        	throw new FileNotFoundException("File was not found");
+    	if(path == null) {
+    		throw new NullPointerException();
+    	}
+    	if(path.isRoot()) {
+    		return true;
+    	}
+    	System.out.println("PATH STORAGE MAP CONTENTS:" + pathStorageMap.toString());
 
         PathNode pN = root.getLastCompNode(path);
-        
+        if (pN == null)
+        	throw new FileNotFoundException("File was not found");
+
         return pN.isDirectory();
     }
 
@@ -129,15 +136,20 @@ public class NamingServer implements Service, Registration
         ArrayList<String> contents = new ArrayList<String>();
         //pN is the node of the last component of the path
         PathNode pN = root.getLastCompNode(directory);
-        
+
         if (pN == null || !pN.isDirectory())
         	throw new FileNotFoundException("Given path does not refer to a directory");
-        
+
         //adds all the children of pN as contents of the directory
         for (String entry : pN.getChildrenMap().keySet())
         	contents.add(entry);
-        
-        return (String[]) contents.toArray();
+        String[] ret = new String[contents.size()];
+        int index = 0;
+        for(String s : contents) {
+        	ret[index] = s;
+        	index++;
+        }
+        return ret;
     }
 
     @Override
@@ -148,7 +160,7 @@ public class NamingServer implements Service, Registration
     	Path parentPath = file.parent();
     	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
     		throw new FileNotFoundException("Parent directory does not exist");
-    	
+
     	//get the node of the parent directory
     	PathNode parentNode = root.getLastCompNode(parentPath);
     	if (parentNode == null)
@@ -164,7 +176,6 @@ public class NamingServer implements Service, Registration
 		} catch (RMIException e) {
 			return false;
 		}
-    	
 	    return true;
     }
 
@@ -174,7 +185,7 @@ public class NamingServer implements Service, Registration
     	Path parentPath = directory.parent();
     	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
     		throw new FileNotFoundException("Parent directory does not exist");
-    	
+
     	//get the node of the parent directory
     	PathNode parentNode = root.getLastCompNode(parentPath);
     	if (parentNode == null)
@@ -188,7 +199,6 @@ public class NamingServer implements Service, Registration
 		} catch (RMIException e) {
 			return false;
 		}
-    	
 	    return true;
     }
 
@@ -223,7 +233,6 @@ public class NamingServer implements Service, Registration
     {
         if (!pathStorageMap.containsKey(file))
         	throw new FileNotFoundException("File does not exist");
-        
         return pathStorageMap.get(file);
     }
 
@@ -231,23 +240,35 @@ public class NamingServer implements Service, Registration
     public Path[] register(Storage client_stub, Command command_stub,
                            Path[] files)
     {
+    	System.out.println("FILES ____ " + Arrays.toString(files));
         checkForNull(client_stub, command_stub, files);
-        
-        if (pathStorageMap.containsValue(client_stub)) //only need to check one of the maps right?
+          if (storageCmdMap.containsKey(client_stub)) //only need to check one of the maps right?
         	throw new IllegalStateException("Storage server is already registered");
-        
         ArrayList<Path> dupFiles = new ArrayList<Path>();
         //only adds paths to the tree if there are no duplicates
         for (Path p : files) {
-        	if (pathStorageMap.containsKey(p))
-        		dupFiles.add(p);
-        	else
-        		root.addFile(p.iterator());
+        	if(!p.isRoot()) {
+        		if (!root.addFile(p.iterator())) {
+            		System.out.println("THERE WAS A DUPLICATE, PATH: "+p);
+            		dupFiles.add(p);
+            	} else {
+            		System.out.println("NO DUPLICATE FOR PATH: "+p);
+                    pathStorageMap.put(p,client_stub);
+                  	System.out.println("check");
+            	}
+        	}
         }
-           
-    	return (Path[]) dupFiles.toArray();
+        Path[] ret = new Path[dupFiles.size()];
+        int index = 0;
+        for(Path p : dupFiles) {
+        	ret[index] = p;
+        	index ++;
+        }
+        System.out.println("ASLDKFJAKLDJFKAJFAD" + dupFiles.toString());
+        storageCmdMap.put(client_stub,command_stub);
+    	return ret;
     }
-    
+
     private void checkForNull(Object... objs)
     {
     	for (Object obj : objs) {
@@ -255,5 +276,5 @@ public class NamingServer implements Service, Registration
     			throw new NullPointerException("cannot have a null parameter");
     	}
     }
-    
+
 }

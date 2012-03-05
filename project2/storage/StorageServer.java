@@ -117,24 +117,19 @@ public class StorageServer implements Storage, Command
     	// delete all duplicate files
     	for(Path p : duplicateFiles) {
     		p.toFile(root).delete();
+        	// prune all empty directories
+        	deleteEmpty(new File(p.toFile(root).getParent()));
     	}
-    	// delete all empty directories
-    	deleteEmpty(root);
     }
 
     public synchronized void deleteEmpty(File parent) {
-    	if(parent.isFile()) {
-    		return;
-    	}
-    	File[] filesAndDirs = parent.listFiles();
-    	//recursively delete empty subdirectories
-    	for(File f : filesAndDirs) {
-    		deleteEmpty(f);
-    	}
-    	// must delete after recursively deleting subdirectories because dirs with
-    	// only empty dirs in them must be deleted
-    	if(parent.list().length == 0) {
-    		parent.delete();
+    	while(!(new Path(parent.getPath())).isRoot()) {
+    		if(parent.list().length == 0) {
+    			parent.delete();
+    		} else {
+    			break;
+    		}
+    		parent = new File(parent.getParent());
     	}
     }
 
@@ -147,6 +142,7 @@ public class StorageServer implements Storage, Command
     {
     	clientSkeleton.stop();
     	commandSkeleton.stop();
+    	stopped(null);
     }
 
     /** Called when the storage server has shut down.
