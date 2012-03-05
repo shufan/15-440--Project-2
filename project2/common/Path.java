@@ -155,7 +155,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     			listHelper(directory, f,filepaths);
             // add non-directory files to the arraylist of files, relative to root
     		} else if(f.isFile()) {
-        		filepaths.add(new Path(f.getPath().replaceFirst(directory.getPath(), "")));
+        		filepaths.add(new Path(f.getPath().substring(directory.getPath().length())));
     		}
     	}
     	return filepaths.toArray(arraytype);
@@ -174,7 +174,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     		if(f.isDirectory()) {
     			listHelper(root, f,filepaths);
     		} else if(f.isFile()) {
-        		filepaths.add(new Path(f.getPath().replaceFirst(root.getPath(), "")));
+        		filepaths.add(new Path(f.getPath().substring(root.getPath().length())));
     		}
     	}
     }
