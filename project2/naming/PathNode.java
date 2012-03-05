@@ -1,5 +1,6 @@
 package naming;
 
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -27,25 +28,11 @@ public class PathNode
 		this.isDir = isDir;
 	}
 
-//	public PathNode getLastAddedNode(Iterator<String> componentItr) {
-//		//if there are more components left in the path
-//		if (componentItr.hasNext()) {
-//			String nextComponent = componentItr.next();
-//			if (children.containsKey(nextComponent)) {
-//				PathNode nextNode = children.get(nextComponent);
-//				return nextNode.getLastAddedNode(componentItr);
-//			}
-//			else
-//				return this;
-//		}
-//		return this;
-//	}
-
 	/*
 	 * Gets the node of the last component in path.
-	 * Returns null if complete path is not in tree.
+	 * Throws FileNotFoundException if complete path is not in tree.
 	 */
-	public PathNode getLastCompNode(Path p) {
+	public PathNode getLastCompNode(Path p) throws FileNotFoundException {
 		PathNode currentNode = this;
 		//iterates through components of p
 		Iterator<String> componentItr = p.iterator();
@@ -55,7 +42,7 @@ public class PathNode
 			if (currentNode.children.containsKey(component))
 				currentNode = currentNode.getChildrenMap().get(component);
 			else
-				return null;
+				throw new FileNotFoundException("Path was not found");
 		}
 		return currentNode;
 	}

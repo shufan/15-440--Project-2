@@ -115,19 +115,12 @@ public class NamingServer implements Service, Registration
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
-    	if(path == null) {
-    		throw new NullPointerException();
-    	}
+    	checkForNull(path);
     	if(path.isRoot()) {
     		return true;
     	}
-    	System.out.println("PATH STORAGE MAP CONTENTS:" + pathStorageMap.toString());
 
-        PathNode pN = root.getLastCompNode(path);
-        if (pN == null)
-        	throw new FileNotFoundException("File was not found");
-
-        return pN.isDirectory();
+        return root.getLastCompNode(path).isDirectory();
     }
 
     @Override
@@ -157,49 +150,54 @@ public class NamingServer implements Service, Registration
     public boolean createFile(Path file)
         throws RMIException, FileNotFoundException
     {
+    	checkForNull(file);
+    	if(file.isRoot()) {
+    		return false;
+    	}
     	Path parentPath = file.parent();
-    	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
-    		throw new FileNotFoundException("Parent directory does not exist");
-
     	//get the node of the parent directory
     	PathNode parentNode = root.getLastCompNode(parentPath);
-    	if (parentNode == null)
-    		return false;
+    	if (parentNode == null || !parentNode.isDirectory())
+    		throw new FileNotFoundException();
     	//add the file as a child to the parent
+    	if(parentNode.getChildrenMap().get(file.last()) != null) {
+    		return false;
+    	}
     	PathNode pN = new PathNode();
     	pN.setIsDir(false);
     	parentNode.getChildrenMap().put(file.last(), pN);
-    	//adds the file to the storage server
-		Command cmd = storageCmdMap.get(getStorage(file));
-		try {
-			cmd.create(file);
-		} catch (RMIException e) {
-			return false;
-		}
-	    return true;
+    	//adds the file to random storage server
+    	if(storageCmdMap.size() >= 1) {
+    		Command cmd = storageCmdMap.get(storageCmdMap.keySet().iterator().next());
+    		try {
+    			cmd.create(file);
+    		} catch (RMIException e) {
+    			return false;
+    		}
+    	    return true;
+    	} else {
+    		throw new IllegalStateException();
+    	}
     }
 
     @Override
     public boolean createDirectory(Path directory) throws FileNotFoundException
     {
-    	Path parentPath = directory.parent();
-    	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
-    		throw new FileNotFoundException("Parent directory does not exist");
-
-    	//get the node of the parent directory
-    	PathNode parentNode = root.getLastCompNode(parentPath);
-    	if (parentNode == null)
+    	checkForNull(directory);
+    	if(directory.isRoot()) {
     		return false;
+    	}
+    	//get the node of the parent directory
+    	PathNode parentNode = root.getLastCompNode(directory.parent());
+    	if(!parentNode.isDirectory()) {
+    		throw new FileNotFoundException();
+    	}
     	//add the directory as a child to the parent
+    	if(parentNode.getChildrenMap().get(directory.last()) != null) {
+    		return false;
+    	}
     	parentNode.getChildrenMap().put(directory.last(), new PathNode());
-    	//adds the directory to the storage server
-		Command cmd = storageCmdMap.get(getStorage(directory));
-		try {
-			cmd.create(directory);
-		} catch (RMIException e) {
-			return false;
-		}
-	    return true;
+    	return true;
     }
 
     @Override
@@ -231,8 +229,11 @@ public class NamingServer implements Service, Registration
     @Override
     public Storage getStorage(Path file) throws FileNotFoundException
     {
-        if (!pathStorageMap.containsKey(file))
+    	checkForNull(file);
+
+        if (!pathStorageMap.containsKey(file)) {
         	throw new FileNotFoundException("File does not exist");
+        }
         return pathStorageMap.get(file);
     }
 
@@ -240,7 +241,6 @@ public class NamingServer implements Service, Registration
     public Path[] register(Storage client_stub, Command command_stub,
                            Path[] files)
     {
-    	System.out.println("FILES ____ " + Arrays.toString(files));
         checkForNull(client_stub, command_stub, files);
           if (storageCmdMap.containsKey(client_stub)) //only need to check one of the maps right?
         	throw new IllegalStateException("Storage server is already registered");
@@ -249,12 +249,9 @@ public class NamingServer implements Service, Registration
         for (Path p : files) {
         	if(!p.isRoot()) {
         		if (!root.addFile(p.iterator())) {
-            		System.out.println("THERE WAS A DUPLICATE, PATH: "+p);
             		dupFiles.add(p);
             	} else {
-            		System.out.println("NO DUPLICATE FOR PATH: "+p);
                     pathStorageMap.put(p,client_stub);
-                  	System.out.println("check");
             	}
         	}
         }
@@ -264,7 +261,6 @@ public class NamingServer implements Service, Registration
         	ret[index] = p;
         	index ++;
         }
-        System.out.println("ASLDKFJAKLDJFKAJFAD" + dupFiles.toString());
         storageCmdMap.put(client_stub,command_stub);
     	return ret;
     }
