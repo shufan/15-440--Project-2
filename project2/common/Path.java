@@ -152,17 +152,17 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	for(File f : files) {
             // recursively list files within directories
     		if(f.isDirectory()) {
-    			listHelper(directory, f,filepaths);
+    			listHelper(new Path(new Path(), f.getName()), f,filepaths);
             // add non-directory files to the arraylist of files, relative to root
     		} else if(f.isFile()) {
-        		filepaths.add(new Path(f.getPath().substring(directory.getPath().length())));
+        		filepaths.add(new Path(new Path(), f.getName()));
     		}
     	}
     	return filepaths.toArray(arraytype);
     }
 
     // helper method for recursively listing directories within directories
-    public static void listHelper(File root, File directory, ArrayList<Path> filepaths) throws FileNotFoundException {
+    public static void listHelper(Path prefix, File directory, ArrayList<Path> filepaths) throws FileNotFoundException {
     	if(!directory.exists()) {
     		throw new FileNotFoundException();
     	}
@@ -172,9 +172,9 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	File[] files = directory.listFiles();
     	for(File f : files) {
     		if(f.isDirectory()) {
-    			listHelper(root, f,filepaths);
+    			listHelper(new Path(prefix,f.getName()), f,filepaths);
     		} else if(f.isFile()) {
-        		filepaths.add(new Path(f.getPath().substring(root.getPath().length())));
+        		filepaths.add(new Path(prefix, f.getName()));
     		}
     	}
     }
