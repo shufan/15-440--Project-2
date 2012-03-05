@@ -34,8 +34,8 @@ import storage.*;
 public class NamingServer implements Service, Registration
 {
 	PathNode root;
-	HashMap<Path, Storage> storageStubsMap;
-	HashMap<Path, Command> cmdStubsMap;
+	HashMap<Path, Storage> pathStorageMap;
+	HashMap<Storage, Command> storageCmdMap;
 	Skeleton<Registration> regisSkel;
 	Skeleton<Service> servSkel;
 	
@@ -47,8 +47,8 @@ public class NamingServer implements Service, Registration
     public NamingServer()
     {
         root = new PathNode();
-        storageStubsMap = new HashMap<Path, Storage>();
-        cmdStubsMap = new HashMap<Path, Command>();
+        pathStorageMap = new HashMap<Path, Storage>();
+        storageCmdMap = new HashMap<Storage, Command>();
     	regisSkel= new Skeleton<Registration>(Registration.class, this, new InetSocketAddress(NamingStubs.REGISTRATION_PORT));
     	servSkel = new Skeleton<Service>(Service.class, this, new InetSocketAddress(NamingStubs.SERVICE_PORT));
     }
@@ -111,25 +111,11 @@ public class NamingServer implements Service, Registration
     {
         throw new UnsupportedOperationException("not implemented");
     }
-
-//    //Given a Path, returns the PathNode of the last component
-//    private PathNode findLastComponent(Path path) {
-//        Iterator<String> pathItr = path.iterator();
-//        PathNode currentNode = root;
-//        while (pathItr.hasNext()) {
-//        	String component = pathItr.next();
-//        	if (currentNode.getChildrenMap().get(component) != null)
-//        		currentNode = currentNode.getChildrenMap().get(component);
-//        	else
-//        		return currentNode;
-//        }
-//        return currentNode;
-//    }
     
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
-        if (!storageStubsMap.containsKey(path))
+        if (!pathStorageMap.containsKey(path))
         	throw new FileNotFoundException("File was not found");
 
         PathNode pN = root.getLastCompNode(path);
@@ -160,7 +146,7 @@ public class NamingServer implements Service, Registration
         throws RMIException, FileNotFoundException
     {
     	Path parentPath = file.parent();
-    	if (!storageStubsMap.containsKey(parentPath)) //only need to check one right?????
+    	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
     		throw new FileNotFoundException("Parent directory does not exist");
     	
     	//get the node of the parent directory
@@ -171,6 +157,13 @@ public class NamingServer implements Service, Registration
     	PathNode pN = new PathNode();
     	pN.setIsDir(false);
     	parentNode.getChildrenMap().put(file.last(), pN);
+    	//adds the file to the storage server
+		Command cmd = storageCmdMap.get(getStorage(file));
+		try {
+			cmd.create(file);
+		} catch (RMIException e) {
+			return false;
+		}
     	
 	    return true;
     }
@@ -179,7 +172,7 @@ public class NamingServer implements Service, Registration
     public boolean createDirectory(Path directory) throws FileNotFoundException
     {
     	Path parentPath = directory.parent();
-    	if (!storageStubsMap.containsKey(parentPath)) //only need to check one right?????
+    	if (!pathStorageMap.containsKey(parentPath)) //only need to check one right?????
     		throw new FileNotFoundException("Parent directory does not exist");
     	
     	//get the node of the parent directory
@@ -188,6 +181,13 @@ public class NamingServer implements Service, Registration
     		return false;
     	//add the directory as a child to the parent
     	parentNode.getChildrenMap().put(directory.last(), new PathNode());
+    	//adds the directory to the storage server
+		Command cmd = storageCmdMap.get(getStorage(directory));
+		try {
+			cmd.create(directory);
+		} catch (RMIException e) {
+			return false;
+		}
     	
 	    return true;
     }
@@ -195,16 +195,36 @@ public class NamingServer implements Service, Registration
     @Override
     public boolean delete(Path path) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if (path.isRoot())
+    		return false;
+    	//get node of parent directory
+    	PathNode parentNode = root.getLastCompNode(path.parent());
+    	if (parentNode == null)
+    		throw new FileNotFoundException("Parent directory does not exist");
+    	//if parent directory contains the last component of path
+    	if (parentNode.getChildrenMap().containsKey(path.last())) {
+    		//deletes from tree
+    		parentNode.getChildrenMap().remove(path.last());
+    		//deletes from storage server
+    		Command cmd = storageCmdMap.get(getStorage(path));
+    		try {
+				cmd.delete(path);
+			} catch (RMIException e) {
+				return false;
+			}
+    		return true;
+    	}
+    	else
+    		throw new FileNotFoundException("Given file/directory does not exist");
     }
 
     @Override
     public Storage getStorage(Path file) throws FileNotFoundException
     {
-        if (!storageStubsMap.containsKey(file))
+        if (!pathStorageMap.containsKey(file))
         	throw new FileNotFoundException("File does not exist");
         
-        return storageStubsMap.get(file);
+        return pathStorageMap.get(file);
     }
 
     //still gotta do stuff with RMI
@@ -213,13 +233,13 @@ public class NamingServer implements Service, Registration
     {
         checkForNull(client_stub, command_stub, files);
         
-        if (storageStubsMap.containsValue(client_stub)) //only need to check one of the maps right?
+        if (pathStorageMap.containsValue(client_stub)) //only need to check one of the maps right?
         	throw new IllegalStateException("Storage server is already registered");
         
         ArrayList<Path> dupFiles = new ArrayList<Path>();
         //only adds paths to the tree if there are no duplicates
         for (Path p : files) {
-        	if (storageStubsMap.containsKey(p))
+        	if (pathStorageMap.containsKey(p))
         		dupFiles.add(p);
         	else
         		root.addFile(p.iterator());
