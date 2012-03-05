@@ -236,5 +236,4 @@ public class NamingServer implements Service, Registration
     	}
     }
     
-    
 }
