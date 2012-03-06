@@ -50,12 +50,9 @@ public class PathNode
 	public boolean addFile(Iterator<String> pathItr) {
 		//iterates through the components of the path
 		if (pathItr.hasNext()) {
-			System.out.println("last step");
 			String comp = pathItr.next();
-			System.out.println("THIS IS A COMPONENT: " + comp);
 			//if component has already been added as this node's child, recurse
 			if (children.containsKey(comp)) {
-				System.out.println("GOODGOODGOODGOODGOOD" + comp);
 				PathNode compNode = children.get(comp);
 				return compNode.addFile(pathItr);
 			}
