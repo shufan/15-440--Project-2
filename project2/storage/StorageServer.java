@@ -123,7 +123,8 @@ public class StorageServer implements Storage, Command
     }
 
     public synchronized void deleteEmpty(File parent) {
-    	while(!(new Path(parent.getPath())).isRoot()) {
+    	System.out.println("NEWEST BUG" + parent.getPath());
+    	while(!parent.equals(root)) {
     		if(parent.list().length == 0) {
     			parent.delete();
     		} else {
