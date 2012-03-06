@@ -111,7 +111,6 @@ class TestStorageServer implements Storage, Command
     {
         // Start storage server skeletons.
         startSkeletons();
-        System.out.println("GOT HERE");
         // Register the storage server with the naming server.
         Path[]      delete_files =
             naming_server.register(client_stub, command_stub, offer_files);
@@ -119,11 +118,8 @@ class TestStorageServer implements Storage, Command
         // Check that the naming server replied with the approprite files.
         if(expect_files != null)
         {
-        	System.out.println(Arrays.toString(delete_files));
-        	System.out.println(Arrays.toString(expect_files));
             if(!TestUtil.sameElements(delete_files, expect_files))
             {
-            	System.out.println("WTF");
                 throw new TestFailed("naming server did not command deletion " +
                                      "of the expected files");
             }

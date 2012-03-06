@@ -78,7 +78,6 @@ public class RegistrationTest extends NamingTest
      */
     private void testMerging() throws TestFailed
     {
-        System.out.println("start testmerging");
         // Register the first storage server with four files.
         Path[]      server1_files =
             new Path[] {new Path("/file"),
@@ -91,7 +90,6 @@ public class RegistrationTest extends NamingTest
             synchronized(this)
             {
                 server1.start(registration_stub, server1_files, null);
-                System.out.println("start testmerging");
             }
         }
         catch(Throwable t)
@@ -290,7 +288,6 @@ public class RegistrationTest extends NamingTest
                                      "exception during duplicate " +
                                      "registration", t);
             }
-            System.out.println("Passed duplicate registration test.");
         }
 
         /** Tests that the naming server <code>register</code> method rejects
@@ -308,7 +305,6 @@ public class RegistrationTest extends NamingTest
         {
             // Start the storage server skeletons, if they have not already been
             // started.
-            System.out.println("Started null test.");
             try
             {
                 startSkeletons();
