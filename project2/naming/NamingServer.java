@@ -103,14 +103,29 @@ public class NamingServer implements Service, Registration
     @Override
     public void lock(Path path, boolean exclusive) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	checkForNull(path, exclusive);
+		if (!isValidPath(path))
+			throw new FileNotFoundException("Path does not point to a valid file/directory");
+        root.lock(path, exclusive);
     }
 
     @Override
     public void unlock(Path path, boolean exclusive)
     {
-        throw new UnsupportedOperationException("not implemented");
+    	checkForNull(path, exclusive);
+		if (!isValidPath(path))
+			throw new IllegalArgumentException("Path does not point to a valid file/directory");
+        root.unlock(path, exclusive);
     }
+    
+	private boolean isValidPath(Path p) {
+		try {
+			root.getLastCompNode(p);
+			return true;
+		} catch (FileNotFoundException e) {
+			return false;
+		}
+	}
 
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
