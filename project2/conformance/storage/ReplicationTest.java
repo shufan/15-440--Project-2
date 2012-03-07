@@ -98,7 +98,6 @@ public class ReplicationTest extends StorageTest
         {
             throw new TestFailed("unable to create new file by replication", t);
         }
-
         // Check that the file copy has the correct size and contents.
         long    resulting_size;
         byte[]  resulting_data;
@@ -337,7 +336,6 @@ public class ReplicationTest extends StorageTest
         {
             throw new TestFailed("cannot start second storage server", t);
         }
-
         // Retrieve storage server client interface stub.
         second_stub = naming_server.clientInterface();
     }

@@ -47,18 +47,18 @@ public class StorageServer implements Storage, Command
     	this.root = root;
     	InetSocketAddress clientAddr;
     	InetSocketAddress commandAddr;
-    	if(client_port == 0) {
-        	clientAddr = new InetSocketAddress(DEFAULT_CLIENT_PORT);
-    	} else {
+    	if(client_port != 0) {
     		clientAddr = new InetSocketAddress(client_port);
-    	}
-		clientSkeleton = new Skeleton(Storage.class, this, clientAddr);
-    	if(command_port == 0) {
-        	commandAddr = new InetSocketAddress(DEFAULT_COMMAND_PORT);
+    		clientSkeleton = new Skeleton(Storage.class, this, clientAddr);
     	} else {
-        	commandAddr = new InetSocketAddress(command_port);
+    		clientSkeleton = new Skeleton(Storage.class, this);
     	}
-		commandSkeleton = new Skeleton(Command.class, this, commandAddr);
+    	if(command_port != 0) {
+        	commandAddr = new InetSocketAddress(command_port);
+        	commandSkeleton = new Skeleton(Command.class, this, commandAddr);
+    	} else {
+    		commandSkeleton = new Skeleton(Command.class, this);
+    	}
     }
 
     /** Creats a storage server, given a directory on the local filesystem.
@@ -74,12 +74,7 @@ public class StorageServer implements Storage, Command
      */
     public StorageServer(File root)
     {
-    	if(root == null) {
-    		throw new NullPointerException();
-    	}
-    	this.root = root;
-    	clientSkeleton = new Skeleton(Storage.class, this, new InetSocketAddress(DEFAULT_CLIENT_PORT));
-    	commandSkeleton = new Skeleton(Command.class, this, new InetSocketAddress(DEFAULT_COMMAND_PORT));
+    	this(root,0,0);
     }
 
     /** Starts the storage server and registers it with the given naming
@@ -219,6 +214,9 @@ public class StorageServer implements Storage, Command
             return false;
         }
         File parent = file.parent().toFile(root);
+        if(!parent.isDirectory()) {
+        	delete(file.parent());
+        }
         parent.mkdirs();
         File f = file.toFile(root);
         try {
@@ -260,12 +258,18 @@ public class StorageServer implements Storage, Command
         throws RMIException, FileNotFoundException, IOException
     {
         File f = file.toFile(root);
-        if(!f.exists() || f.isDirectory()) {
-            throw new FileNotFoundException();
+        if(f.exists()) {
+        	delete(file);
         }
-        int fileSize = (int) server.size(file);
-        byte[] data = server.read(file, 0, fileSize);
-        write(file, 0, data);
+        create(file);
+        long fileSize = server.size(file);
+        long offset = 0;
+        while(offset < fileSize) {
+        	int bytesToCopy = (int)Math.min(Integer.MAX_VALUE, fileSize - offset);
+        	byte[] data = server.read(file, offset, bytesToCopy);
+        	write(file,offset,data);
+        	offset += bytesToCopy;
+        }
         return true;
     }
 }

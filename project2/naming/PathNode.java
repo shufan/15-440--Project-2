@@ -10,8 +10,10 @@ import common.Path;
 
 public class PathNode
 {
-	private HashMap<String, PathNode> children = new HashMap<String, PathNode>();
+	HashMap<String, PathNode> children = new HashMap<String, PathNode>();
+	private Path currPath;
 	private boolean isDir;
+	private int readCount; //keep track of number of reads for replication, resets at 20 
 	private int numReaders; //keeps track of the number of readers reading this node
 	private LinkedList<LockRequest> lockReqs = new LinkedList<LockRequest>();
 	
@@ -21,6 +23,7 @@ public class PathNode
 		children = new HashMap<String, PathNode>();
 		isDir = true;
 		numReaders = 0;
+		readCount = 0;
 	}
 
 	public HashMap<String, PathNode> getChildrenMap() {
@@ -33,6 +36,10 @@ public class PathNode
 
 	public void setIsDir(boolean isDir) {
 		this.isDir = isDir;
+	}
+	
+	public void setCurrPath(Path file) {
+		this.currPath = file;
 	}
 	
 	public int getNumReaders() {
@@ -141,13 +148,15 @@ System.out.println("Node #"+i+" numReaders: " + currNode.numReaders);
 		return false;
 	}
 	
-	public void unlock(Path p, boolean exclusive) {
+	public Path unlock(Path p, boolean exclusive) {
 		System.out.println("\nWant to unlock: "+p);
 		synchronized(this) {
 			PathNode currNode = this;
 			Iterator<String> compItr = p.iterator();
 			while (compItr.hasNext()) {
 				currNode.numReaders--;
+				readCount ++;
+				System.out.println("readCount = " + readCount);
 				if (currNode.numReaders == 0)
 					currNode.servicePending();
 				currNode = currNode.getChildrenMap().get(compItr.next());
@@ -162,14 +171,26 @@ System.out.println("Node #"+i+" numReaders: " + currNode.numReaders);
 				System.out.println("bbbb");
 				//one less reader
 				currNode.numReaders--;
+				readCount ++;
+				System.out.println("readCount = " + readCount);
 				if (currNode.numReaders == 0)
 					currNode.servicePending();
 			}
 			System.out.println(currNode.getChildrenMap().toString());
 			System.out.println("exclusive: "+exclusive);
-			
+			if(currNode.currPath == null) {
+				System.out.println("currPATH IS NULL BUT WHY?");
+			} else {
+				System.out.println("currPATH IS: " + currNode.currPath.toString());
+			}
+			if(currNode.currPath != null && readCount >= 20) {
+				System.out.println("returning" + currNode.currPath.toString());
+				readCount = 0;
+				return currNode.currPath;
+			}
 			System.out.println("Unlocked for path: "+p+" Num readers now:" +currNode.numReaders);
 		}
+		return null;
 	}
 	
 	private void servicePending() {
@@ -228,6 +249,8 @@ System.out.println("Node #"+i+" numReaders: " + currNode.numReaders);
 				PathNode currNode = this;
 				do {
 					PathNode pN = new PathNode();
+					pN.setIsDir(true);
+					pN.setCurrPath(new Path(currNode.currPath,comp));
 					currNode.getChildrenMap().put(comp, pN);
 					if (!pathItr.hasNext()) {
 						pN.setIsDir(false);
@@ -241,5 +264,26 @@ System.out.println("Node #"+i+" numReaders: " + currNode.numReaders);
 			}
 		}
 		return false;
+	}
+
+	public void getFilesWithin(Iterator<String> iter, ArrayList<Path> files) {
+		if(iter.hasNext()) {
+			String name = iter.next();
+			System.out.println(children);
+			System.out.println("sadfasdf- "+name);
+			children.get(name).getFilesWithin(iter, files);
+		} else {
+			getFilesWithinHelper(files);
+		}
+	}
+
+	private void getFilesWithinHelper(ArrayList<Path> files) {
+		if(!isDir) {
+			files.add(currPath);
+		} else {
+			for(PathNode pN : children.values()) {
+				pN.getFilesWithinHelper(files);
+			}
+		}
 	}
 }
