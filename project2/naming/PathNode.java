@@ -249,7 +249,6 @@ System.out.println("Node #"+i+" numReaders: " + currNode.numReaders);
 				PathNode currNode = this;
 				do {
 					PathNode pN = new PathNode();
-					pN.setIsDir(true);
 					pN.setCurrPath(new Path(currNode.currPath,comp));
 					currNode.getChildrenMap().put(comp, pN);
 					if (!pathItr.hasNext()) {

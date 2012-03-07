@@ -48,10 +48,9 @@ public class NamingServer implements Service, Registration
     public NamingServer()
     {
     	PathNode rootnode = new PathNode();
-    	rootnode.setIsDir(true);
     	rootnode.setCurrPath(new Path("/"));
         root = rootnode;
-        
+
         pathStorageMap = new ConcurrentHashMap<Path, Set<Storage>>();
         storageCmdMap = new ConcurrentHashMap<Storage, Command>();
     	regisSkel= new Skeleton<Registration>(Registration.class, this, new InetSocketAddress(NamingStubs.REGISTRATION_PORT));
@@ -122,53 +121,50 @@ public class NamingServer implements Service, Registration
 			throw new IllegalArgumentException("Path does not point to a valid file/directory");
         Path toCopy = root.unlock(path, exclusive);
         //replication done in unlock (when access is given to a reader or writer
-        synchronized(this) {
-        	Set<Storage> hasFile = pathStorageMap.get(path);
-        	//writer request, so select one storage to keep copy of the file, delete file elsewhere
-        	if(exclusive) {
-        		if(hasFile != null) {
-        			//choose one storage with the file to keep the file on
-        			Iterator<Storage> iter = hasFile.iterator();
-        			Storage keptCopy = iter.next();
-        			//delete on all other storages with the file
-        			while(iter.hasNext()) {
-        				Command command_stub = storageCmdMap.get(iter.next());
+        Set<Storage> hasFile = pathStorageMap.get(path);
+        //writer request, so select one storage to keep copy of the file, delete file elsewhere
+        if(exclusive) {
+        	if(hasFile != null) {
+        		//choose one storage with the file to keep the file on
+        		Iterator<Storage> iter = hasFile.iterator();
+        		Storage keptCopy = iter.next();
+        		//delete on all other storages with the file
+        		while(iter.hasNext()) {
+        			Command command_stub = storageCmdMap.get(iter.next());
+        			try {
+						command_stub.delete(path);
+					} catch (RMIException e) {
+						e.printStackTrace();
+					}
+        		}
+        		Set<Storage> updatedHasFiles = Collections.newSetFromMap(new ConcurrentHashMap<Storage, Boolean>());
+        		updatedHasFiles.add(keptCopy);
+        		pathStorageMap.put(path, updatedHasFiles);
+        	}
+        } else {
+        //read request, so if time to make a copy, file to copy is returned by read
+        	if(toCopy != null) {
+        		Set<Storage> allServers = storageCmdMap.keySet();
+        		Iterator<Storage> iter = allServers.iterator();
+        		Storage copyFrom = hasFile.iterator().next();
+        		while(iter.hasNext()) {
+        			Storage s = iter.next();
+        			if(!hasFile.contains(s)) {
+        				Command command_stub = storageCmdMap.get(s);
         				try {
-							command_stub.delete(path);
-						} catch (RMIException e) {
+							command_stub.copy(toCopy, copyFrom);
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
+        				pathStorageMap.get(toCopy).add(s);
+        				break;
         			}
-        			//need a concurrent hashset, backed by concurrent hashmap
-        			Set<Storage> updatedHasFiles = Collections.newSetFromMap(new ConcurrentHashMap<Storage, Boolean>());
-        			updatedHasFiles.add(keptCopy);
-        			pathStorageMap.put(path, updatedHasFiles);
         		}
-        	} else {
-        	//read request, so if time to make a copy, file to copy is returned by read
-        		if(toCopy != null) {
-        			Set<Storage> allServers = storageCmdMap.keySet();
-        			Iterator<Storage> iter = allServers.iterator();
-        			Storage copyFrom = hasFile.iterator().next();
-        			while(iter.hasNext()) {
-        				Storage s = iter.next();
-        				if(!hasFile.contains(s)) {
-        					Command command_stub = storageCmdMap.get(s);
-        					try {
-								command_stub.copy(toCopy, copyFrom);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-        					pathStorageMap.get(toCopy).add(s);
-        					break;
-        				}
-        			}
-      
-        		}
+
         	}
         }
     }
-    
+
 	private boolean isValidPath(Path p) {
 		try {
 			root.getLastCompNode(p);
@@ -264,7 +260,6 @@ public class NamingServer implements Service, Registration
     	}
     	PathNode pN = new PathNode();
     	pN.setCurrPath(directory);
-    	pN.setIsDir(true);
     	parentNode.getChildrenMap().put(directory.last(), pN);
     	return true;
     }
@@ -324,7 +319,7 @@ public class NamingServer implements Service, Registration
         			}
             		pathStorageMap.remove(path);
         		}
-        	}	
+        	}
     	}
     	else
     		throw new FileNotFoundException("Given file/directory does not exist");
@@ -340,9 +335,9 @@ public class NamingServer implements Service, Registration
         	throw new FileNotFoundException("File does not exist");
         }
         Set<Storage> hasFile = pathStorageMap.get(file);
-        
+
         if(!hasFile.iterator().hasNext()) {
-        	throw new FileNotFoundException(); 
+        	throw new FileNotFoundException();
         } else {
         	return hasFile.iterator().next();
         }
