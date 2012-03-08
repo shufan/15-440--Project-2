@@ -41,7 +41,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     public Path(Path path, String component)
     {
         // check for illegal argument conditions
-    	if((component.indexOf('/') != -1) || (component.indexOf(':') != -1) || (component.length() == 0)) {
+    	if((component.indexOf('/') != -1) || (component.indexOf(':') != -1) ||
+    			(component.length() == 0)) {
     		throw new IllegalArgumentException();
     	}
     	pathComponents = new LinkedList<String>();
@@ -153,7 +154,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
             // recursively list files within directories
     		if(f.isDirectory()) {
     			listHelper(new Path(new Path(), f.getName()), f,filepaths);
-            // add non-directory files to the arraylist of files, relative to root
+            // add non-directory files to the arraylist of files, relative to 
+    		// root
     		} else if(f.isFile()) {
         		filepaths.add(new Path(new Path(), f.getName()));
     		}
@@ -162,7 +164,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     }
 
     // helper method for recursively listing directories within directories
-    public static void listHelper(Path prefix, File directory, ArrayList<Path> filepaths) throws FileNotFoundException {
+    private static void listHelper(Path prefix, File directory, 
+    		ArrayList<Path> filepaths) throws FileNotFoundException {
     	if(!directory.exists()) {
     		throw new FileNotFoundException();
     	}
@@ -242,7 +245,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	if(otherComponents.size() > pathComponents.size()) {
     		return false;
     	}
-        // iterate through each and check that components in other are equal to these
+        // iterate through each and check that components in other are equal 
+    	// to these
     	while(otherIterator.hasNext()) {
     		if(!otherIterator.next().equals(thisIterator.next())) {
     			return false;
@@ -322,9 +326,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         	// if top directory is larger lexicographically
         	} else if(topOfThis.compareTo(topOfOther) > 0) {
         		return 1;
-        	// if top directory equal recursively compare paths starting at child directory
+        	// if top directory equal recursively compare paths starting at 
+        	// child directory
         	} else {
-        		return new Path(theseComponents).compareTo(new Path(otherComponents));
+        		return new Path(theseComponents).compareTo(
+        				new Path(otherComponents));
         	}
     	}
     }

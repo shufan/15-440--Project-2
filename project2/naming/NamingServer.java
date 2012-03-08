@@ -53,8 +53,10 @@ public class NamingServer implements Service, Registration
 
         pathStorageMap = new ConcurrentHashMap<Path, Set<Storage>>();
         storageCmdMap = new ConcurrentHashMap<Storage, Command>();
-    	regisSkel= new Skeleton<Registration>(Registration.class, this, new InetSocketAddress(NamingStubs.REGISTRATION_PORT));
-    	servSkel = new Skeleton<Service>(Service.class, this, new InetSocketAddress(NamingStubs.SERVICE_PORT));
+    	regisSkel= new Skeleton<Registration>(Registration.class, this, 
+    			new InetSocketAddress(NamingStubs.REGISTRATION_PORT));
+    	servSkel = new Skeleton<Service>(Service.class, this, 
+    			new InetSocketAddress(NamingStubs.SERVICE_PORT));
     }
 
     /** Starts the naming server.
@@ -109,7 +111,8 @@ public class NamingServer implements Service, Registration
     {
     	checkForNull(path, exclusive);
 		if (!isValidPath(path))
-			throw new FileNotFoundException("Path does not point to a valid file/directory");
+			throw new FileNotFoundException("Path does not point to a valid " +
+					"file/directory");
         root.lock(path, exclusive);
     }
 
@@ -118,11 +121,14 @@ public class NamingServer implements Service, Registration
     {
     	checkForNull(path, exclusive);
 		if (!isValidPath(path))
-			throw new IllegalArgumentException("Path does not point to a valid file/directory");
+			throw new IllegalArgumentException("Path does not point to a " +
+					"valid file/directory");
         Path toCopy = root.unlock(path, exclusive);
-        //replication done in unlock (when access is given to a reader or writer
+        //replication done in unlock (when access is given to a reader or 
+        //writer
         Set<Storage> hasFile = pathStorageMap.get(path);
-        //writer request, so select one storage to keep copy of the file, delete file elsewhere
+        //writer request, so select one storage to keep copy of the file, 
+        //delete file elsewhere
         if(exclusive) {
         	if(hasFile != null) {
         		//choose one storage with the file to keep the file on
@@ -134,15 +140,16 @@ public class NamingServer implements Service, Registration
         			try {
 						command_stub.delete(path);
 					} catch (RMIException e) {
-						e.printStackTrace();
 					}
         		}
-        		Set<Storage> updatedHasFiles = Collections.newSetFromMap(new ConcurrentHashMap<Storage, Boolean>());
+        		Set<Storage> updatedHasFiles = Collections.newSetFromMap(
+        				new ConcurrentHashMap<Storage, Boolean>());
         		updatedHasFiles.add(keptCopy);
         		pathStorageMap.put(path, updatedHasFiles);
         	}
         } else {
-        //read request, so if time to make a copy, file to copy is returned by read
+        //read request, so if time to make a copy, file to copy is returned 
+        //by read
         	if(toCopy != null) {
         		Set<Storage> allServers = storageCmdMap.keySet();
         		Iterator<Storage> iter = allServers.iterator();
@@ -154,7 +161,6 @@ public class NamingServer implements Service, Registration
         				try {
 							command_stub.copy(toCopy, copyFrom);
 						} catch (Exception e) {
-							e.printStackTrace();
 						}
         				pathStorageMap.get(toCopy).add(s);
         				break;
@@ -165,6 +171,7 @@ public class NamingServer implements Service, Registration
         }
     }
 
+    // returns whether a given path is valid
 	private boolean isValidPath(Path p) {
 		try {
 			root.getLastCompNode(p);
@@ -178,10 +185,8 @@ public class NamingServer implements Service, Registration
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
     	checkForNull(path);
-    	if(path.isRoot()) {
+    	if(path.isRoot())
     		return true;
-    	}
-
         return root.getLastCompNode(path).isDirectory();
     }
 
@@ -193,7 +198,8 @@ public class NamingServer implements Service, Registration
         PathNode pN = root.getLastCompNode(directory);
 
         if (pN == null || !pN.isDirectory())
-        	throw new FileNotFoundException("Given path does not refer to a directory");
+        	throw new FileNotFoundException("Given path does not refer to a " +
+        			"directory");
 
         //adds all the children of pN as contents of the directory
         for (String entry : pN.getChildrenMap().keySet())
@@ -218,8 +224,9 @@ public class NamingServer implements Service, Registration
     	Path parentPath = file.parent();
     	//get the node of the parent directory
     	PathNode parentNode = root.getLastCompNode(parentPath);
-    	if (parentNode == null || !parentNode.isDirectory())
+    	if (parentNode == null || !parentNode.isDirectory()) {
     		throw new FileNotFoundException();
+    	}
     	//add the file as a child to the parent
     	if(parentNode.getChildrenMap().get(file.last()) != null) {
     		return false;
@@ -230,7 +237,8 @@ public class NamingServer implements Service, Registration
     	parentNode.getChildrenMap().put(file.last(), pN);
     	//adds the file to random storage server
     	if(storageCmdMap.size() >= 1) {
-    		Command cmd = storageCmdMap.get(storageCmdMap.keySet().iterator().next());
+    		Command cmd = storageCmdMap.get(
+    				storageCmdMap.keySet().iterator().next());
     		try {
     			cmd.create(file);
     		} catch (RMIException e) {
@@ -276,15 +284,13 @@ public class NamingServer implements Service, Registration
     		throw new FileNotFoundException("Parent directory does not exist");
     	//if parent directory contains the last component of path
     	if (parentNode.getChildrenMap().containsKey(path.last())) {
-    		System.out.println(path);
     		if(isDirectory(path)) {
     			//deletes from tree
-    			Set<Storage> storagesToDeleteFrom = Collections.newSetFromMap(new ConcurrentHashMap<Storage, Boolean>());
+    			Set<Storage> storagesToDeleteFrom = Collections.newSetFromMap(
+    					new ConcurrentHashMap<Storage, Boolean>());
     			//get all file paths in the directory
     			ArrayList<Path> files = new ArrayList<Path>();
     			Iterator<String> pathIter = path.iterator();
-    			//TODO
-    			System.out.println(root.children);
     			root.getFilesWithin(pathIter, files);
         		for(Path f : files) {
         			storagesToDeleteFrom.addAll(pathStorageMap.get(f));
@@ -322,7 +328,8 @@ public class NamingServer implements Service, Registration
         	}
     	}
     	else
-    		throw new FileNotFoundException("Given file/directory does not exist");
+    		throw new FileNotFoundException("Given file/directory does not " +
+    				"exist");
 		return result;
     }
 
@@ -331,7 +338,8 @@ public class NamingServer implements Service, Registration
     {
     	checkForNull(file);
 
-        if (!pathStorageMap.containsKey(file) || pathStorageMap.get(file).isEmpty()) {
+        if (!pathStorageMap.containsKey(file) || 
+        		pathStorageMap.get(file).isEmpty()) {
         	throw new FileNotFoundException("File does not exist");
         }
         Set<Storage> hasFile = pathStorageMap.get(file);
@@ -343,13 +351,13 @@ public class NamingServer implements Service, Registration
         }
     }
 
-    //still gotta do stuff with RMI
     public Path[] register(Storage client_stub, Command command_stub,
                            Path[] files)
     {
         checkForNull(client_stub, command_stub, files);
-          if (storageCmdMap.containsKey(client_stub)) //only need to check one of the maps right?
-        	throw new IllegalStateException("Storage server is already registered");
+          if (storageCmdMap.containsKey(client_stub))
+        	throw new IllegalStateException("Storage server is " +
+        			"already registered");
         ArrayList<Path> dupFiles = new ArrayList<Path>();
         //only adds paths to the tree if there are no duplicates
         for (Path p : files) {
@@ -360,7 +368,8 @@ public class NamingServer implements Service, Registration
             		if(pathStorageMap.containsKey(p)) {
             			pathStorageMap.get(p).add(client_stub);
             		} else {
-            			Set<Storage> hasFile = Collections.newSetFromMap(new ConcurrentHashMap<Storage, Boolean>());
+            			Set<Storage> hasFile = Collections.newSetFromMap(
+            					new ConcurrentHashMap<Storage, Boolean>());
             			hasFile.add(client_stub);
                         pathStorageMap.put(p,hasFile);
             		}

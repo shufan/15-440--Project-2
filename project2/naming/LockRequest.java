@@ -1,5 +1,6 @@
 package naming;
 
+//Reprsents a Thread's request for a lock because it has to wait
 public class LockRequest
 {
 	private boolean exclusive;

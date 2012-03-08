@@ -1,7 +1,8 @@
 package naming;
 
+//A wrapper for booleans that allows it to be changed
 public class BooleanObj {
-	boolean bool;
+	private boolean bool;
 	
 	public BooleanObj(boolean bool) {
 		this.bool = bool;
@@ -18,7 +19,6 @@ public class BooleanObj {
 	}
 	
 	public void setBool(boolean bool) {
-		System.out.println("SET TO " + bool);
 		this.bool = bool;
 	}
 }

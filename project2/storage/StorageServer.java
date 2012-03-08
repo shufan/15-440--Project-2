@@ -17,8 +17,8 @@ import naming.*;
 public class StorageServer implements Storage, Command
 {
 	File root;
-	Skeleton clientSkeleton;
-	Skeleton commandSkeleton;
+	Skeleton<Storage> clientSkeleton;
+	Skeleton<Command> commandSkeleton;
 	int clientPort;
 	int commandPort;
 	static int DEFAULT_CLIENT_PORT = 7225;
@@ -49,15 +49,17 @@ public class StorageServer implements Storage, Command
     	InetSocketAddress commandAddr;
     	if(client_port != 0) {
     		clientAddr = new InetSocketAddress(client_port);
-    		clientSkeleton = new Skeleton(Storage.class, this, clientAddr);
+    		clientSkeleton = new Skeleton<Storage>(
+    				Storage.class, this, clientAddr);
     	} else {
-    		clientSkeleton = new Skeleton(Storage.class, this);
+    		clientSkeleton = new Skeleton<Storage>(Storage.class, this);
     	}
     	if(command_port != 0) {
         	commandAddr = new InetSocketAddress(command_port);
-        	commandSkeleton = new Skeleton(Command.class, this, commandAddr);
+        	commandSkeleton = new Skeleton<Command>(
+        			Command.class, this, commandAddr);
     	} else {
-    		commandSkeleton = new Skeleton(Command.class, this);
+    		commandSkeleton = new Skeleton<Command>(Command.class, this);
     	}
     }
 
@@ -105,10 +107,13 @@ public class StorageServer implements Storage, Command
     	}
         clientSkeleton.start();
         commandSkeleton.start();
-    	Storage clientStub = (Storage) Stub.create(Storage.class, clientSkeleton, hostname);
-    	Command commandStub = (Command) Stub.create(Command.class, commandSkeleton, hostname);
+    	Storage clientStub = (Storage) Stub.create(
+    			Storage.class, clientSkeleton, hostname);
+    	Command commandStub = (Command) Stub.create(
+    			Command.class, commandSkeleton, hostname);
     	Path[] files = Path.list(root);
-    	Path[] duplicateFiles = naming_server.register(clientStub, commandStub, files);
+    	Path[] duplicateFiles = naming_server.register(
+    			clientStub, commandStub, files);
     	// delete all duplicate files
     	for(Path p : duplicateFiles) {
     		p.toFile(root).delete();
@@ -241,7 +246,7 @@ public class StorageServer implements Storage, Command
         }
     }
 
-    public boolean deleteHelper(File f) {
+    private boolean deleteHelper(File f) {
         if(f.isDirectory()) {
             File[] subfiles = f.listFiles();
             for(File subf : subfiles) {
@@ -265,7 +270,8 @@ public class StorageServer implements Storage, Command
         long fileSize = server.size(file);
         long offset = 0;
         while(offset < fileSize) {
-        	int bytesToCopy = (int)Math.min(Integer.MAX_VALUE, fileSize - offset);
+        	int bytesToCopy = (int)Math.min(
+        			Integer.MAX_VALUE, fileSize - offset);
         	byte[] data = server.read(file, offset, bytesToCopy);
         	write(file,offset,data);
         	offset += bytesToCopy;
