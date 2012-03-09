@@ -53,9 +53,9 @@ public class NamingServer implements Service, Registration
 
         pathStorageMap = new ConcurrentHashMap<Path, Set<Storage>>();
         storageCmdMap = new ConcurrentHashMap<Storage, Command>();
-    	regisSkel= new Skeleton<Registration>(Registration.class, this, 
+    	regisSkel= new Skeleton<Registration>(Registration.class, this,
     			new InetSocketAddress(NamingStubs.REGISTRATION_PORT));
-    	servSkel = new Skeleton<Service>(Service.class, this, 
+    	servSkel = new Skeleton<Service>(Service.class, this,
     			new InetSocketAddress(NamingStubs.SERVICE_PORT));
     }
 
@@ -124,10 +124,10 @@ public class NamingServer implements Service, Registration
 			throw new IllegalArgumentException("Path does not point to a " +
 					"valid file/directory");
         Path toCopy = root.unlock(path, exclusive);
-        //replication done in unlock (when access is given to a reader or 
+        //replication done in unlock (when access is given to a reader or
         //writer
         Set<Storage> hasFile = pathStorageMap.get(path);
-        //writer request, so select one storage to keep copy of the file, 
+        //writer request, so select one storage to keep copy of the file,
         //delete file elsewhere
         if(exclusive) {
         	if(hasFile != null) {
@@ -148,7 +148,7 @@ public class NamingServer implements Service, Registration
         		pathStorageMap.put(path, updatedHasFiles);
         	}
         } else {
-        //read request, so if time to make a copy, file to copy is returned 
+        //read request, so if time to make a copy, file to copy is returned
         //by read
         	if(toCopy != null) {
         		Set<Storage> allServers = storageCmdMap.keySet();
@@ -339,7 +339,7 @@ public class NamingServer implements Service, Registration
     {
     	checkForNull(file);
 
-        if (!pathStorageMap.containsKey(file) || 
+        if (!pathStorageMap.containsKey(file) ||
         		pathStorageMap.get(file).isEmpty()) {
         	throw new FileNotFoundException("File does not exist");
         }

@@ -42,7 +42,7 @@ public class StorageServer implements Storage, Command
     public StorageServer(File root, int client_port, int command_port)
     {
     	if(root == null) {
-    		throw new NullPointerException();
+    		throw new NullPointerException("Root is null");
     	}
     	this.root = root;
     	InetSocketAddress clientAddr;
@@ -105,7 +105,8 @@ public class StorageServer implements Storage, Command
         throws RMIException, UnknownHostException, FileNotFoundException
     {
     	if(!root.exists() || root.isFile()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("Directory with which the server was"
+                    + "created does not exist or is in fact a file");
     	}
         clientSkeleton.start();
         commandSkeleton.start();
@@ -167,7 +168,8 @@ public class StorageServer implements Storage, Command
     {
     	File f = file.toFile(root);
     	if(!f.exists() || f.isDirectory()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("File cannot be found or refers to"
+                     + "a directory");
     	}
     	return f.length();
     }
@@ -178,10 +180,12 @@ public class StorageServer implements Storage, Command
     {
     	File f = file.toFile(root);
     	if(!f.exists() || f.isDirectory()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("File cannot be found or refers to"
+                     + "a directory");
     	}
     	if((offset < 0) || (length < 0) || (offset + length > f.length())) {
-    		throw new IndexOutOfBoundsException();
+    		throw new IndexOutOfBoundsException("Sequence specified is outside"
+                    + "of the bounds of the file, or length is negative");
     	}
     	// reads from the file using FileInputStream and returns the content
     	InputStream reader = new FileInputStream(f);
@@ -196,10 +200,11 @@ public class StorageServer implements Storage, Command
     {
     	File f = file.toFile(root);
     	if(!f.exists() || f.isDirectory()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("File cannot be found or refers to"
+                     + "a directory");
     	}
     	if(offset < 0) {
-    		throw new IndexOutOfBoundsException();
+    		throw new IndexOutOfBoundsException("The offset is negative");
     	}
     	InputStream reader = new FileInputStream(f);
     	FileOutputStream writer = new FileOutputStream(f);
@@ -223,7 +228,7 @@ public class StorageServer implements Storage, Command
     public synchronized boolean create(Path file)
     {
         if(file == null) {
-            throw new NullPointerException();
+            throw new NullPointerException("Given a null argument");
         }
         if(file.isRoot()) {
             return false;

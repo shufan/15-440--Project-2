@@ -43,7 +43,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         // check for illegal argument conditions
     	if((component.indexOf('/') != -1) || (component.indexOf(':') != -1) ||
     			(component.length() == 0)) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Component includes the separator"
+                    + ", a colon or is the empty string");
     	}
     	pathComponents = new LinkedList<String>();
         // add existing path
@@ -68,7 +69,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
         // check for illegal argument conditions
     	if((!path.startsWith("/")) || path.contains(":")) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Path string does not begin with"
+                    + "a forward slash, or contains a colon chracter");
     	}
     	pathComponents = new LinkedList<String>();
     	StringTokenizer pathParser = new StringTokenizer(path,"/");
@@ -120,7 +122,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
             // remove not supported
 			@Override
 			public void remove() {
-				throw new UnsupportedOperationException();
+				throw new UnsupportedOperationException("Remove is not supported");
 			}
     	}
     	return new PathIter();
@@ -140,10 +142,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
         // check for illegal argument and file not found conditions
     	if(!directory.exists()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("Root directory does not exist");
     	}
     	if(!directory.isDirectory()) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Directory exists but does not"
+                 + "refer to a directory");
     	}
         // retrive array of files in given directory
     	File[] files = directory.listFiles();
@@ -154,7 +157,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
             // recursively list files within directories
     		if(f.isDirectory()) {
     			listHelper(new Path(new Path(), f.getName()), f,filepaths);
-            // add non-directory files to the arraylist of files, relative to 
+            // add non-directory files to the arraylist of files, relative to
     		// root
     		} else if(f.isFile()) {
         		filepaths.add(new Path(new Path(), f.getName()));
@@ -163,14 +166,15 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	return filepaths.toArray(arraytype);
     }
 
-    // helper method for recursively listing directories within directories    
-    private static void listHelper(Path prefix, File directory, 
+    // helper method for recursively listing directories within directories
+    private static void listHelper(Path prefix, File directory,
     		ArrayList<Path> filepaths) throws FileNotFoundException {
     	if(!directory.exists()) {
-    		throw new FileNotFoundException();
+    		throw new FileNotFoundException("Directory does not exist");
     	}
     	if(!directory.isDirectory()) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Directory exists but does not"
+    				+ "refer to a directory");
     	}
     	File[] files = directory.listFiles();
     	// for each file, either recurses on subdirectories or adds file
@@ -202,7 +206,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
         // check if root
     	if(this.isRoot()) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Path represents the root"
+                    + "directory and has no parent");
     	}
     	LinkedList<String> parentPathComponents = new LinkedList<String>();
     	parentPathComponents.addAll(pathComponents);
@@ -221,7 +226,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     {
         // check if root
     	if(this.isRoot()) {
-    		throw new IllegalArgumentException();
+    		throw new IllegalArgumentException("Path represents the root"
+                    + "and has no last component");
     	} else {
     		return pathComponents.peekLast();
     	}
@@ -246,7 +252,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	if(otherComponents.size() > pathComponents.size()) {
     		return false;
     	}
-        // iterate through each and check that components in other are equal 
+        // iterate through each and check that components in other are equal
     	// to these
     	while(otherIterator.hasNext()) {
     		if(!otherIterator.next().equals(thisIterator.next())) {
@@ -327,7 +333,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         	// if top directory is larger lexicographically
         	} else if(topOfThis.compareTo(topOfOther) > 0) {
         		return 1;
-        	// if top directory equal recursively compare paths starting at 
+        	// if top directory equal recursively compare paths starting at
         	// child directory
         	} else {
         		return new Path(theseComponents).compareTo(
