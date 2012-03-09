@@ -18,7 +18,7 @@ public class PathNode
 	//keeps track of the number of readers reading this node
 	private int numReaders; 
 	private LinkedList<LockRequest> lockReqs = new LinkedList<LockRequest>();
-	
+	//EXCLUSIVE is a flag indicating that a thread has exclusive access
 	private final int EXCLUSIVE = -1;
 
 	public PathNode() {
@@ -28,27 +28,31 @@ public class PathNode
 		readCount = 0;
 	}
 
+	//returns subdirectories and files of the current node
 	public HashMap<String, PathNode> getChildrenMap() {
 		return children;
 	}
 
+	//returns true if the node is a directory
 	public boolean isDirectory() {
 		return isDir;
 	}
 
+	//sets whether or not the node is a directory
 	public void setIsDir(boolean isDir) {
 		this.isDir = isDir;
 	}
 	
+	//sets the current path of the node
 	public void setCurrPath(Path file) {
 		this.currPath = file;
 	}
 	
+	//returns the number of readers reading from the node
 	public int getNumReaders() {
 		return numReaders;
 	}
 	
-	//used parent for the while loop...
 	public void lock(Path p, boolean exclusive) throws FileNotFoundException {
 		//locks contains a list of locks the thread must obtain 
 		//before it gets the ok
@@ -72,7 +76,7 @@ public class PathNode
 					//adds to the current node's queue of locks
 					currNode.lockReqs.add(lReq);
 					//thread can't get a lock from currNode
-					locks.add(lReq.getBoolObj());
+					locks.add(lReq.hasLock());
 				}
 				currNode = currNode.getChildrenMap().get(nextComp);
 			}
@@ -96,7 +100,7 @@ public class PathNode
 				LockRequest lReq = new LockRequest(exclusive, 
 						Thread.currentThread());
 				currNode.lockReqs.add(lReq);
-				locks.add(lReq.getBoolObj());
+				locks.add(lReq.hasLock());
 			}
 			
 		}
@@ -106,7 +110,8 @@ public class PathNode
 
 		while (locks.contains(falseBoolObj)) {
 			try {
-				Thread.currentThread().sleep(100);
+				Thread.currentThread();
+				Thread.sleep(100);
 			} catch (InterruptedException e) {
 			}
 		}
@@ -121,22 +126,17 @@ public class PathNode
 		return false;
 	}
 	
-	//returns whether there is a read request waiting at this node
-	private boolean readReqWaiting() {
-		for (LockRequest lReq : lockReqs) {
-			if (!lReq.isExclusive())
-				return true;
-		}
-		return false;
-	}
-	
 	public Path unlock(Path p, boolean exclusive) {
 		synchronized(this) {
 			PathNode currNode = this;
+			//iterates through each component of the path
 			Iterator<String> compItr = p.iterator();
 			while (compItr.hasNext()) {
+				//unlocking, so decreases the component's number of readers 
+				//by one
 				currNode.numReaders--;
-				readCount ++;
+				readCount++;
+				//if node has no more readers, it can service pending requests
 				if (currNode.numReaders == 0)
 					currNode.servicePending();
 				currNode = currNode.getChildrenMap().get(compItr.next());
@@ -161,6 +161,7 @@ public class PathNode
 		return null;
 	}
 	
+	//services threads waiting to obtain a lock
 	private void servicePending() {
 		while (!lockReqs.isEmpty()) {
 			LockRequest lReq = lockReqs.peek();
@@ -178,10 +179,8 @@ public class PathNode
 		}
 	}
 	
-	/*
-	 * Gets the node of the last component in path.
-	 * Throws FileNotFoundException if complete path is not in tree.
-	 */
+	//gets the node of the last component in path.
+	//throws FileNotFoundException if complete path is not in tree.
 	public PathNode getLastCompNode(Path p) throws FileNotFoundException {
 		PathNode currentNode = this;
 		//iterates through components of p
@@ -197,12 +196,12 @@ public class PathNode
 		return currentNode;
 	}
 
+	//adds a given path to the current directory tree
 	public boolean addFile(Iterator<String> pathItr) {
 		//iterates through the components of the path
 		if (pathItr.hasNext()) {
 			String comp = pathItr.next();
-			//if component has already been added as this node's child, 
-			//recurse
+			//if component has already been added as this node's child, recurse
 			if (children.containsKey(comp)) {
 				PathNode compNode = children.get(comp);
 				return compNode.addFile(pathItr);
@@ -215,6 +214,7 @@ public class PathNode
 				do {
 					PathNode pN = new PathNode();
 					pN.setCurrPath(new Path(currNode.currPath,comp));
+					//adds subdirectories and files to the node's children
 					currNode.getChildrenMap().put(comp, pN);
 					if (!pathItr.hasNext()) {
 						pN.setIsDir(false);
@@ -230,6 +230,8 @@ public class PathNode
 		return false;
 	}
 
+	//returns files stored at a path, given a pointer to the beginning of 
+	//the path
 	public void getFilesWithin(Iterator<String> iter, ArrayList<Path> files) {
 		if(iter.hasNext()) {
 			String name = iter.next();
@@ -239,6 +241,7 @@ public class PathNode
 		}
 	}
 
+	//a helper method for the getFilesWithin method
 	private void getFilesWithinHelper(ArrayList<Path> files) {
 		if(!isDir) {
 			files.add(currPath);

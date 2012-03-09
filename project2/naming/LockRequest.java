@@ -14,19 +14,18 @@ public class LockRequest
 		hasLock = new BooleanObj(false);
 	}
 
+	//returns true if the thread is asking for exclusive access
 	public boolean isExclusive() {
 		return exclusive;
 	}
 	
+	//returns the thread that requested the lock
 	public Thread caller() {
 		return caller;
 	}
 	
+	//returns the BooleanObj that determines whether the lock has been obtained
 	public BooleanObj hasLock() {
-		return hasLock;
-	}
-	
-	public BooleanObj getBoolObj() {
 		return hasLock;
 	}
 }

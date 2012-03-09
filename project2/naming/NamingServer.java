@@ -292,6 +292,7 @@ public class NamingServer implements Service, Registration
     			ArrayList<Path> files = new ArrayList<Path>();
     			Iterator<String> pathIter = path.iterator();
     			root.getFilesWithin(pathIter, files);
+    			//deletes file from all storages that contain it
         		for(Path f : files) {
         			storagesToDeleteFrom.addAll(pathStorageMap.get(f));
         		}
@@ -342,6 +343,7 @@ public class NamingServer implements Service, Registration
         		pathStorageMap.get(file).isEmpty()) {
         	throw new FileNotFoundException("File does not exist");
         }
+        //retrieves storage stub from the pathStorageMap
         Set<Storage> hasFile = pathStorageMap.get(file);
 
         if(!hasFile.iterator().hasNext()) {
@@ -365,6 +367,7 @@ public class NamingServer implements Service, Registration
         		if (!root.addFile(p.iterator())) {
             		dupFiles.add(p);
             	} else {
+            		//not a duplicate, adds the storage server to the map
             		if(pathStorageMap.containsKey(p)) {
             			pathStorageMap.get(p).add(client_stub);
             		} else {
@@ -376,16 +379,19 @@ public class NamingServer implements Service, Registration
             	}
         	}
         }
+        storageCmdMap.put(client_stub,command_stub);
+        //builds array of duplicate files so it can be returned
         Path[] ret = new Path[dupFiles.size()];
         int index = 0;
         for(Path p : dupFiles) {
         	ret[index] = p;
         	index ++;
         }
-        storageCmdMap.put(client_stub,command_stub);
+
     	return ret;
     }
 
+    //checks parameters for null values, throws NullPointerException if nulls
     private void checkForNull(Object... objs)
     {
     	for (Object obj : objs) {

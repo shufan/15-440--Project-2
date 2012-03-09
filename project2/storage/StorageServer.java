@@ -47,14 +47,16 @@ public class StorageServer implements Storage, Command
     	this.root = root;
     	InetSocketAddress clientAddr;
     	InetSocketAddress commandAddr;
-    	if(client_port != 0) {
+    	// initializes the client port only if it is a valid port
+    	if(client_port > 0) {
     		clientAddr = new InetSocketAddress(client_port);
     		clientSkeleton = new Skeleton<Storage>(
     				Storage.class, this, clientAddr);
     	} else {
     		clientSkeleton = new Skeleton<Storage>(Storage.class, this);
     	}
-    	if(command_port != 0) {
+    	// initializes the command port only if it is a valid port
+    	if(command_port > 0) {
         	commandAddr = new InetSocketAddress(command_port);
         	commandSkeleton = new Skeleton<Command>(
         			Command.class, this, commandAddr);
@@ -122,8 +124,13 @@ public class StorageServer implements Storage, Command
     	}
     }
 
+    /*
+     * Deletes directories if they are empty
+     */
     public synchronized void deleteEmpty(File parent) {
+    	// cannot delete the root
     	while(!parent.equals(root)) {
+    		// if the parent directory does not have children, deletes parent
     		if(parent.list().length == 0) {
     			parent.delete();
     		} else {
@@ -176,6 +183,7 @@ public class StorageServer implements Storage, Command
     	if((offset < 0) || (length < 0) || (offset + length > f.length())) {
     		throw new IndexOutOfBoundsException();
     	}
+    	// reads from the file using FileInputStream and returns the content
     	InputStream reader = new FileInputStream(f);
     	byte[] output = new byte[length];
     	reader.read(output, (int) offset, length);
@@ -195,8 +203,10 @@ public class StorageServer implements Storage, Command
     	}
     	InputStream reader = new FileInputStream(f);
     	FileOutputStream writer = new FileOutputStream(f);
+    	//determinds how many bytes are to be read
     	long readLength = Math.min(offset, f.length());
     	byte[] offsetBytes = new byte[(int) readLength];
+    	//reads from the data and writes to the file
     	reader.read(offsetBytes);
     	writer.write(offsetBytes, 0, (int) readLength);
 		long fillLength = offset - f.length();
@@ -218,16 +228,18 @@ public class StorageServer implements Storage, Command
         if(file.isRoot()) {
             return false;
         }
+        //obtains the parent of the given file
         File parent = file.parent().toFile(root);
+        //ensures the parent is a directory
         if(!parent.isDirectory()) {
         	delete(file.parent());
         }
         parent.mkdirs();
+        //creates the file
         File f = file.toFile(root);
         try {
 			return f.createNewFile();
 		} catch (IOException e) {
-			e.printStackTrace();
 			return false;
 		}
     }
@@ -235,9 +247,11 @@ public class StorageServer implements Storage, Command
     @Override
     public synchronized boolean delete(Path path)
     {
+    	//cannot delete the root
         if(path.isRoot()) {
             return false;
         }
+        //deletes the file
         File f = path.toFile(root);
         if(f.isFile()) {
             return f.delete();
@@ -246,6 +260,7 @@ public class StorageServer implements Storage, Command
         }
     }
 
+    //a helper method for the delete method
     private boolean deleteHelper(File f) {
         if(f.isDirectory()) {
             File[] subfiles = f.listFiles();
@@ -262,10 +277,12 @@ public class StorageServer implements Storage, Command
     public synchronized boolean copy(Path file, Storage server)
         throws RMIException, FileNotFoundException, IOException
     {
+    	//deletes the given file if it already exists on the server
         File f = file.toFile(root);
         if(f.exists()) {
         	delete(file);
         }
+        //creates the file on this server and copies bytes over from the other
         create(file);
         long fileSize = server.size(file);
         long offset = 0;

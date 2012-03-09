@@ -163,7 +163,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	return filepaths.toArray(arraytype);
     }
 
-    // helper method for recursively listing directories within directories
+    // helper method for recursively listing directories within directories    
     private static void listHelper(Path prefix, File directory, 
     		ArrayList<Path> filepaths) throws FileNotFoundException {
     	if(!directory.exists()) {
@@ -173,6 +173,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     		throw new IllegalArgumentException();
     	}
     	File[] files = directory.listFiles();
+    	// for each file, either recurses on subdirectories or adds file
     	for(File f : files) {
     		if(f.isDirectory()) {
     			listHelper(new Path(prefix,f.getName()), f,filepaths);
